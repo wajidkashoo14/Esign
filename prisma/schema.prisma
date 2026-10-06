@@ -14,23 +14,24 @@ datasource db {
 // same schema works on SQLite and Postgres.
 
 model Agreement {
-  id           String   @id @default(cuid())
-  title        String
-  body         String // template text, may contain {{variables}}
-  variables    String   @default("{}") // JSON object: variable name -> value
-  status       String   @default("draft") // draft | sent | partially_signed | completed | voided | expired
-  signingMode  String   @default("parallel") // parallel | sequential
-  expiresAt    DateTime?
-  renderedBody String? // body with variables substituted, frozen at send time
-  docHash      String? // SHA-256 of the frozen document, set at send time
-  sentAt       DateTime?
-  completedAt  DateTime?
-  voidedAt     DateTime?
-  voidReason   String?
-  finalPdf     Bytes?
-  finalPdfHash String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(cuid())
+  title          String
+  body           String // template text, may contain {{variables}}
+  variables      String    @default("{}") // JSON object: variable name -> value
+  status         String    @default("draft") // draft | sent | partially_signed | completed | declined | voided | expired
+  signingMode    String    @default("parallel") // parallel | sequential
+  expiresAt      DateTime?
+  renderedBody   String? // body with variables substituted, frozen at send time
+  docHash        String? // SHA-256 of the frozen document, set at send time
+  sentAt         DateTime?
+  completedAt    DateTime?
+  voidedAt       DateTime?
+  voidReason     String?
+  finalPdf       Bytes?
+  finalPdfHash   String?
+  finalPdfSealed Boolean   @default(false) // PDF carries a digital signature (seal)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   signers Signer[]
   events  AuditEvent[]
@@ -54,6 +55,12 @@ model Signer {
   signatureType String? // typed | drawn
   signatureName String? // text typed by the signer (typed signatures)
   signatureImg  Bytes? // PNG
+  declinedAt    DateTime?
+  declineReason String?
+  otpHash       String? // HMAC of the emailed one-time code
+  otpExpiresAt  DateTime?
+  otpAttempts   Int       @default(0)
+  otpVerifiedAt DateTime?
   createdAt     DateTime  @default(now())
 
   events AuditEvent[]
@@ -67,7 +74,7 @@ model AuditEvent {
   agreement   Agreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
   signerId    String?
   signer      Signer?   @relation(fields: [signerId], references: [id], onDelete: SetNull)
-  type        String // created | sent | resent | viewed | consented | signed | completed | voided | expired
+  type        String // created | sent | resent | viewed | otp_sent | otp_verified | signed | declined | completed | voided | expired
   ip          String?
   userAgent   String?
   meta        String? // JSON
@@ -82,6 +89,13 @@ model Template {
   title     String
   body      String
   createdAt DateTime @default(now())
+}
+
+// Small key/value store for server state (e.g. last used 2FA time step).
+model AppState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model RateLimit {

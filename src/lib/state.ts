@@ -3,6 +3,7 @@ export const AGREEMENT_STATUSES = [
   "sent",
   "partially_signed",
   "completed",
+  "declined",
   "voided",
   "expired",
 ] as const;
@@ -13,15 +14,17 @@ export const STATUS_LABELS: Record<AgreementStatus, string> = {
   sent: "Sent",
   partially_signed: "Partially signed",
   completed: "Completed",
+  declined: "Declined",
   voided: "Voided",
   expired: "Expired",
 };
 
 const TRANSITIONS: Record<AgreementStatus, readonly AgreementStatus[]> = {
   draft: ["sent"],
-  sent: ["partially_signed", "completed", "voided", "expired"],
-  partially_signed: ["completed", "voided", "expired"],
+  sent: ["partially_signed", "completed", "declined", "voided", "expired"],
+  partially_signed: ["completed", "declined", "voided", "expired"],
   completed: [],
+  declined: [],
   voided: [],
   expired: [],
 };

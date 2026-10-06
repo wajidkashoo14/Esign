@@ -5,4 +5,5 @@ export interface ActionState {
   ok?: boolean;
   message?: string;
   links?: IssuedLink[];
+  data?: Record<string, string>;
 }

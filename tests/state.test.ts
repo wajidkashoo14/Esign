@@ -20,11 +20,13 @@ test("legal transitions", () => {
   assert.ok(canTransition("partially_signed", "completed"));
   assert.ok(canTransition("partially_signed", "voided"));
   assert.ok(canTransition("sent", "expired"));
+  assert.ok(canTransition("sent", "declined"));
+  assert.ok(canTransition("partially_signed", "declined"));
 });
 
 test("terminal states and drafts cannot jump", () => {
   for (const to of AGREEMENT_STATUSES) {
-    for (const from of ["completed", "voided", "expired"] as const) assert.equal(canTransition(from, to), false);
+    for (const from of ["completed", "declined", "voided", "expired"] as const) assert.equal(canTransition(from, to), false);
   }
   assert.equal(canTransition("draft", "completed"), false);
   assert.equal(canTransition("draft", "voided"), false);
