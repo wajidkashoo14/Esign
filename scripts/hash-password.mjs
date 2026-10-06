@@ -7,7 +7,9 @@ if (!pw || pw.length < 10) {
   process.exit(1);
 }
 const hash = bcrypt.hashSync(pw, 12);
+// .env files go through dotenv-expand, which would treat "$2b" etc. as variables: escape every "$".
+const escaped = hash.split("$").join("\\$");
 console.log("\nFor .env / .env.local (dollar signs escaped):");
-console.log(`OWNER_PASSWORD_HASH="${hash.replaceAll("$", "\$")}"`);
+console.log(`OWNER_PASSWORD_HASH="${escaped}"`);
 console.log("\nFor Vercel / other dashboards (raw):");
 console.log(hash);
