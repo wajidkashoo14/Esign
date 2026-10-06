@@ -4,6 +4,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeEqual } from "../tokens";
+import { verifyTotp } from "../totp";
+import { db } from "./db";
 import { env } from "./env";
 
 export const SESSION_COOKIE = "esign_session";
@@ -19,6 +21,24 @@ export async function checkCredentials(email: string, password: string): Promise
   const emailOk = safeEqual(email.trim().toLowerCase(), e.OWNER_EMAIL.toLowerCase());
   const pwOk = await bcrypt.compare(password.slice(0, 200), emailOk ? e.OWNER_PASSWORD_HASH : getDummyHash()).catch(() => false);
   return emailOk && pwOk;
+}
+
+/**
+ * Second factor: 6-digit authenticator code, required only when OWNER_TOTP_SECRET is set.
+ * Each time step can be used once (stored in AppState), so an observed code can't be replayed.
+ */
+export async function checkTotp(code: string): Promise<boolean> {
+  const secret = env().OWNER_TOTP_SECRET;
+  if (!secret) return true;
+  const counter = verifyTotp(secret, code.replace(/\s+/g, ""));
+  if (counter === null) return false;
+  await db.appState.deleteMany({ where: { key: { startsWith: "totp:" }, updatedAt: { lt: new Date(Date.now() - 10 * 60_000) } } });
+  try {
+    await db.appState.create({ data: { key: `totp:${counter}`, value: "used" } });
+    return true;
+  } catch {
+    return false; // this code was already used
+  }
 }
 
 const secretKey = () => new TextEncoder().encode(env().AUTH_SECRET);

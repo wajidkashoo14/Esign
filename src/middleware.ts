@@ -2,7 +2,7 @@ import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "esign_session";
-const OWNER_PREFIXES = ["/dashboard", "/agreements", "/templates", "/api/agreements"];
+const OWNER_PREFIXES = ["/dashboard", "/agreements", "/templates", "/settings", "/api/agreements"];
 
 async function hasValidSession(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get(SESSION_COOKIE)?.value;

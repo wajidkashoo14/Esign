@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { checkCredentials, endSession, startSession } from "@/lib/server/auth";
+import { checkCredentials, checkTotp, endSession, startSession } from "@/lib/server/auth";
+import { totpEnabled } from "@/lib/server/env";
 import { clear, hit } from "@/lib/server/rate-limit";
 import { clientInfo } from "@/lib/server/request";
 import { log } from "@/lib/server/log";
@@ -22,9 +23,13 @@ export async function loginAction(_prev: ActionState, form: FormData): Promise<A
     return { error: `Too many attempts. Try again in about ${mins} minute${mins === 1 ? "" : "s"}.` };
   }
 
-  if (!(await checkCredentials(email, password))) {
+  const twoStep = totpEnabled();
+  const credentialsOk = await checkCredentials(email, password);
+  // Check the code only after the password, and give one generic error either way.
+  const codeOk = credentialsOk && (await checkTotp(String(form.get("code") ?? "")));
+  if (!credentialsOk || !codeOk) {
     log.warn("auth.login_failed");
-    return { error: "Invalid email or password." };
+    return { error: twoStep ? "Invalid email, password or authenticator code." : "Invalid email or password." };
   }
   await clear(ipKey);
   await startSession();
