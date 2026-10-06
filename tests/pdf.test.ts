@@ -86,8 +86,8 @@ test("sealed PDF carries a signature over the whole file", async () => {
   const tampered = Buffer.from(pdf);
   tampered[200] = tampered[200]! ^ 1;
   assert.equal(signatureCoversFile(tampered), false, "any change breaks the digest");
-  delete process.env.PDF_SEAL_P12_BASE64;
-  delete process.env.PDF_SEAL_P12_PASSWORD;
+  process.env.PDF_SEAL_P12_BASE64 = "";
+  process.env.PDF_SEAL_P12_PASSWORD = "";
   resetEnvCache();
   resetSealCache();
 });

@@ -267,7 +267,7 @@ class Writer {
           const size = block.level === 1 ? 16 : block.level === 2 ? 13 : 11.5;
           this.ensure(size * 1.5 + 40); // keep headings with the text that follows
           this.y -= block.level === 1 ? 10 : 6;
-          this.rich(block.content, { size, bold: true, gap: 3 });
+          this.rich(block.content, { size, bold: true, gap: 5 });
           break;
         }
         case "paragraph":
@@ -292,6 +292,11 @@ const fmt = (d: Date | null) => (d ? d.toISOString().replace("T", " ").replace(/
 
 // ------------------------------------------------------------------ document
 
+// The Latin fonts are pre-subset (scripts/subset-fonts.mjs) and embedded whole: pdf-lib's own
+// subsetting drops Noto Sans glyphs. Ligatures are off because the "fi"/"fl" ligature glyphs
+// render with a gap. Devanagari keeps all OpenType features: they are required for shaping.
+const LATIN = { subset: false, features: { liga: false, clig: false } };
+
 export async function createFinalPdf(input: PdfInput): Promise<PDFDocument> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -300,8 +305,8 @@ export async function createFinalPdf(input: PdfInput): Promise<PDFDocument> {
   doc.setCreator("Self-hosted E-Sign");
   const files = await loadFontFiles();
   const fonts = new FontSet({
-    regular: await doc.embedFont(files.regular, { subset: true }),
-    bold: await doc.embedFont(files.bold, { subset: true }),
+    regular: await doc.embedFont(files.regular, LATIN),
+    bold: await doc.embedFont(files.bold, LATIN),
     devaRegular: await doc.embedFont(files.devaRegular, { subset: true }),
     devaBold: await doc.embedFont(files.devaBold, { subset: true }),
     mono: await doc.embedFont(StandardFonts.Courier),
