@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "node-forge", "@signpdf/signpdf", "@signpdf/signer-p12", "@signpdf/placeholder-pdf-lib", "pdf-lib", "@pdf-lib/fontkit"],
+  // PDF fonts are read from disk at runtime; make sure they ship with every server function.
+  outputFileTracingIncludes: { "/**": ["./assets/fonts/**/*"] },
   async headers() {
     // The Content-Security-Policy (with per-request nonce) is set in src/middleware.ts.
     return [
