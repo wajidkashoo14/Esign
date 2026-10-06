@@ -7,9 +7,7 @@ import { useServerForm } from "./useServerForm";
 const SAMPLE = {
   name: "Mutual NDA",
   title: "Mutual Non-Disclosure Agreement",
-  body: `# Mutual Non-Disclosure Agreement
-
-This agreement is made on **{{date}}** between **{{party_a}}** and **{{party_b}}** (each a "Party").
+  body: `This agreement is made on **{{date}}** between **{{party_a}}** and **{{party_b}}** (each a "Party").
 
 ## 1. Purpose
 

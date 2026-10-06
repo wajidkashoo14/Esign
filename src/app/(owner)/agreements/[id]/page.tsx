@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DeleteDraftForm, ResendButton, SendButton, VoidForm } from "@/components/AgreementActions";
+import { DeleteDraftForm, ResendButton, SendPanel, VoidForm } from "@/components/AgreementActions";
 import { AgreementBody } from "@/components/AgreementBody";
 import { IconBan, IconCheck, IconClock, IconDownload, IconEye, IconMail, IconPen, IconSend, IconShield, IconX } from "@/components/Icons";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -97,15 +97,7 @@ export default async function AgreementDetail({ params }: { params: Promise<{ id
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-6">
-          {status === "draft" && (
-            <section className="card">
-              <h2 className="card-title">Ready to send?</h2>
-              <p className="mt-1 mb-4 text-sm text-gray-500">
-                Check the document below. Once sent, each signer gets a personal link and the text can no longer be edited.
-              </p>
-              <SendButton id={a.id} signerCount={a.signers.length} />
-            </section>
-          )}
+          <SendPanel id={a.id} signerCount={a.signers.length} isDraft={status === "draft"} />
 
           <section className="card">
             <div className="mb-4 flex items-center justify-between gap-3">

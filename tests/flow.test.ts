@@ -14,7 +14,8 @@ Object.assign(process.env, { NODE_ENV: "test" });
 process.env.OWNER_EMAIL = "owner@example.com";
 process.env.OWNER_PASSWORD_HASH = "$2b$12$" + "a".repeat(53);
 process.env.AUTH_SECRET = "test-secret-".padEnd(48, "x");
-for (const k of ["RESEND_API_KEY", "SMTP_HOST", "PDF_SEAL_P12_BASE64", "OWNER_TOTP_SECRET", "APP_URL"]) delete process.env[k];
+// Empty (not deleted) so Prisma's automatic .env loading cannot fill them in from a developer's .env.
+for (const k of ["RESEND_API_KEY", "SMTP_HOST", "PDF_SEAL_P12_BASE64", "PDF_SEAL_P12_PASSWORD", "OWNER_TOTP_SECRET", "APP_URL"]) process.env[k] = "";
 process.env.SIGNER_EMAIL_OTP = "off";
 
 execSync("npx prisma migrate deploy", { env: process.env, stdio: "ignore" });
@@ -233,8 +234,8 @@ describe("sealed final PDF", () => {
       assert.ok(signatureCoversFile(a.finalPdf!));
       assert.equal(a.finalPdfHash, sha256Hex(a.finalPdf!));
     } finally {
-      delete process.env.PDF_SEAL_P12_BASE64;
-      delete process.env.PDF_SEAL_P12_PASSWORD;
+      process.env.PDF_SEAL_P12_BASE64 = "";
+      process.env.PDF_SEAL_P12_PASSWORD = "";
       resetEnvCache();
       resetSealCache();
     }

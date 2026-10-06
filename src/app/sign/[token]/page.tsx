@@ -67,7 +67,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
 
   const verified = view.otpRequired ? await isSignerVerified(view.tokenHash) : true;
   const done = !!view.signedAt;
-  const steps = view.otpRequired ? ["Read the document", "Confirm your email", "Sign"] : ["Read the document", "Sign"];
+  const steps = view.otpRequired ? ["Read", "Verify email", "Sign"] : ["Read", "Sign"];
   const step = view.otpRequired && verified ? 3 : 2;
 
   return (
