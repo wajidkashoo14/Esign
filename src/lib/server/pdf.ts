@@ -78,7 +78,8 @@ class Writer {
 
   wrap(text: string, font: PDFFont, size: number, width: number): string[] {
     const lines: string[] = [];
-    for (const para of encodable(text, font).split("\n")) {
+    for (const raw of text.split("\n")) {
+      const para = encodable(raw, font);
       if (!para.trim()) {
         lines.push("");
         continue;
