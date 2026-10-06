@@ -8,17 +8,24 @@ pdf-lib · jose + bcryptjs · zod · Resend or SMTP (nodemailer).
 
 ## Features
 
-- Owner login from env vars (`OWNER_EMAIL`, `OWNER_PASSWORD_HASH`), JWT in an httpOnly cookie, DB-backed login rate limit.
-- Agreements: title, plain-text body with `{{variables}}`, reusable templates, signers with order, expiry date.
-  Statuses: `draft → sent → partially_signed → completed`, plus `voided` and `expired`.
+- Owner login from env vars (`OWNER_EMAIL`, `OWNER_PASSWORD_HASH`), JWT in an httpOnly cookie, DB-backed login rate limit,
+  optional **two-step login** with an authenticator app (`OWNER_TOTP_SECRET`).
+- Agreements: title, body with `{{variables}}` and simple **formatting** (`# headings`, `**bold**`, numbered and bullet
+  lists, `---` lines) with a live preview, reusable templates, signers with order, expiry date.
+  Statuses: `draft → sent → partially_signed → completed`, plus `declined`, `voided` and `expired`.
 - Send: a 32-byte random token per signer; only its SHA-256 hash is stored. Parallel or sequential signing.
   Resend issues a fresh link and invalidates the old one.
-- Signing page (no account): full text, ESIGN / IT Act consent box, typed signature (cursive font rendered to a PNG on a
-  canvas) or drawn signature. The text is frozen at send time and its SHA-256 recorded.
-- Audit events (created, sent, resent, viewed, signed, completed, voided, expired) with IP, user agent and UTC timestamp.
-- Completion: final PDF with signature blocks and a Certificate of Completion (audit trail and document hash). The PDF's
-  SHA-256 is stored, the PDF is emailed to all parties and the owner can download it.
-- Dashboard with status filters, detail page with audit timeline, resend / void / download.
+- Signing page (no account, mobile-first): full text, optional **6-digit email code** to confirm the signer controls the
+  invited address, ESIGN / IT Act consent box, typed signature (cursive font rendered to a PNG on a canvas) or drawn
+  signature, and a **Decline** option with a reason. The text is frozen at send time and its SHA-256 recorded.
+- Audit events (created, sent, resent, viewed, otp_sent, otp_verified, signed, declined, completed, voided, expired) with IP,
+  user agent and UTC timestamp.
+- Completion: final PDF (Noto Sans fonts, **Hindi/Devanagari supported**, ₹) with signature blocks and a Certificate of
+  Completion. Optionally **digitally sealed** so PDF readers flag any later change. The PDF's SHA-256 is stored, the PDF is
+  emailed to every signer and the owner, and signers can download it again from their link.
+- Owner emails on each signature, on decline and on completion.
+- Dashboard with stats, search and status filters; detail page with activity timeline, resend / void / download; Settings page
+  showing what is configured, with a test-email button and two-step login setup.
 
 ## Local setup (Windows PowerShell)
 
@@ -30,7 +37,8 @@ npm install
 Copy-Item .env.example .env
 
 # 1. Create the owner password hash and paste the printed OWNER_PASSWORD_HASH line into .env
-npm run hash-password -- "choose a long password"
+#    (single quotes, so PowerShell doesn't change characters like $ in the password)
+npm run hash-password -- 'choose a long password'
 
 # 2. Create an AUTH_SECRET (48 random bytes) and paste it into .env
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
@@ -57,6 +65,19 @@ hashes are stored) and, in development only, printed to the console. Configure o
 | Resend | `RESEND_API_KEY`, `EMAIL_FROM` (a verified sender) |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM` |
 
+**Resend, step by step:** create an account at resend.com → **Domains → Add domain** (e.g. `yourdomain.com`) → add the DNS
+records it shows at your domain registrar and wait for *Verified* → **API Keys → Create** → set `RESEND_API_KEY` and
+`EMAIL_FROM="Your Name <sign@yourdomain.com>"` → redeploy → **Settings → Send me a test email**. Replies to signer emails go
+to `OWNER_EMAIL`.
+
+### Optional features
+
+| Feature | How to turn it on |
+| --- | --- |
+| Signer email codes | `SIGNER_EMAIL_OTP`: `auto` (default: on once email is configured), `on` or `off`. In development with `on` and no email provider, codes are printed to the console. |
+| PDF seal | `npm run make-seal-cert -- "Your Company"`, then set the printed `PDF_SEAL_P12_PASSWORD` and `PDF_SEAL_P12_BASE64`. A self-signed seal proves the file is unchanged; a certificate from a CA on the Adobe trust list also shows your identity as trusted. |
+| Two-step login | **Settings → Set up two-step login**, scan the QR code, check a code, then set the shown `OWNER_TOTP_SECRET` and redeploy. Remove it to turn 2FA off. |
+
 ### Scripts
 
 | Command | What it does |
@@ -66,7 +87,8 @@ hashes are stored) and, in development only, printed to the console. Configure o
 | `npm run check` | all three |
 | `npm run db:migrate` | `prisma migrate dev` (create new migrations; then run `npm run db:sync-pg` and see below) |
 | `npm run db:sync-pg` | regenerate `prisma/postgres/schema.prisma` from `prisma/schema.prisma` |
-| `npm run hash-password -- "pw"` | bcrypt hash for `OWNER_PASSWORD_HASH` |
+| `npm run hash-password -- 'pw'` | bcrypt hash for `OWNER_PASSWORD_HASH` (single quotes in PowerShell) |
+| `npm run make-seal-cert -- "Name"` | self-signed certificate for sealing PDFs |
 
 ## Deploying to Vercel with Neon or Supabase
 
@@ -81,6 +103,8 @@ SQLite is for local use only (Vercel's filesystem is not persistent). Production
    it generates the client from the Postgres schema, applies `prisma/postgres/migrations` with `migrate deploy`, then builds.
 3. **Set environment variables** (Production): `DATABASE_URL`, `DIRECT_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD_HASH` (raw hash, no
    backslashes), `AUTH_SECRET`, `APP_URL` (your https URL, no trailing slash), `EMAIL_FROM` and a Resend or SMTP provider.
+   Optional: `SIGNER_EMAIL_OTP`, `PDF_SEAL_P12_BASE64` + `PDF_SEAL_P12_PASSWORD`, `OWNER_TOTP_SECRET`.
+   Database migrations run automatically on every deploy.
 4. Deploy, open the site, sign in, and send yourself a test agreement.
 
 When you change `prisma/schema.prisma`: run `npm run db:migrate` (SQLite), then `npm run db:sync-pg`, then create the matching
@@ -108,6 +132,11 @@ Self-hosting elsewhere: `npm run build && npm start` behind a reverse proxy that
 - **Sequential mode:** later signers get no link until the previous signer finishes; the next signer is emailed automatically.
   Without email, use **Get link** on the detail page.
 - **Expiry:** checked on every read and materialised as `expired` (with an audit event).
+- **Email codes:** 6 digits, valid 10 minutes, 5 attempts, stored as an HMAC keyed with `AUTH_SECRET`. A correct code gives
+  that browser a 30-minute signed cookie bound to the signer's current link.
+- **Two-step login:** RFC 6238 TOTP (SHA-1, 6 digits, 30 s, ±1 step); each time step is accepted once.
+- **PDF fonts:** Noto Sans (pre-subset to Latin, `scripts/subset-fonts.mjs`) and Noto Sans Devanagari with full shaping,
+  from `assets/fonts` (SIL Open Font License).
 
 ## Security notes
 
@@ -118,7 +147,8 @@ Self-hosting elsewhere: `npm run build && npm start` behind a reverse proxy that
 - **Input:** zod validation, control/bidi-character stripping, length limits, PNG signature validation (magic bytes, size,
   dimensions); React escapes all output and email HTML is escaped.
 - **Logs:** structured logs contain event codes and opaque ids only: no names, emails, IPs, tokens or document text.
-- **Rate limits:** login (per IP and global) and signing submissions, stored in the database so they hold across serverless instances.
+- **Rate limits:** login (per IP and global), signing, decline, email-code requests (per IP and 5 per signer per hour) and code
+  checks, stored in the database so they hold across serverless instances.
 - **Owner password:** set `OWNER_PASSWORD_HASH` to a bcrypt hash only; use a long passphrase.
 - Signature images, PDFs and audit data live in your database. Back it up, and treat the database as sensitive.
 
@@ -129,13 +159,14 @@ the record (a unique link sent to their email), and an audit trail. Such signatu
 contracts under India's Information Technology Act, 2000 (s.10A) and the US ESIGN Act / UETA, **but**:
 
 - It is **not** an Aadhaar eSign, a Digital Signature Certificate (DSC) signature, or an eIDAS qualified electronic signature.
-  There is no identity verification beyond control of the email address (and the link).
+  Identity rests on control of the signer's email (the personal link, plus the emailed code when enabled); there is no ID check.
 - Some documents cannot be validly signed this way at all, e.g. in India: wills, trusts, powers of attorney, negotiable
   instruments (other than cheques), and contracts for the sale of immovable property, and some documents require stamp duty
   or registration. Other jurisdictions have similar exclusions.
-- The PDF is **not** cryptographically signed; integrity rests on the stored SHA-256 hashes and the audit trail.
-- The PDF uses standard Latin fonts: characters outside that set (e.g. Devanagari) show as `?` in the PDF, although the
-  original text and its hash are kept in the database and signing page. Embed a Unicode font before using non-Latin agreements.
+- Without a seal certificate the PDF is not cryptographically signed; integrity then rests on the stored SHA-256 hashes and the
+  audit trail. A self-signed seal shows the file is unchanged but does not prove to third parties who sealed it.
+- The PDF supports Latin and Devanagari. Other scripts (Tamil, Bengali, Urdu, ...) print as `?` in the PDF, although the
+  original text and its hash are kept in the database and on the signing page. Add the matching Noto font before using them.
 - This is not legal advice. Have a lawyer review your templates and your use case.
 
 For Aadhaar eSign or qualified signatures, integrate a licensed provider (e.g. Digio or Leegality) — see the roadmap.
