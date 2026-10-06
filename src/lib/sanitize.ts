@@ -1,6 +1,5 @@
 // Control characters except \n and \t, plus bidi override characters that can
 // be used to visually spoof text.
-// eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩]/g;
 
 export function cleanText(input: string, maxLen: number): string {

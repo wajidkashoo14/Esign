@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
-export default [
+const config = [
   { ignores: [".next/**", "node_modules/**", "prisma/dev.db*", "next-env.d.ts"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   { rules: { "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }] } },
 ];
+export default config;
