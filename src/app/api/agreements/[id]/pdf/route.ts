@@ -4,6 +4,7 @@ import { db } from "@/lib/server/db";
 import { finalizeAgreement, safeFilename } from "@/lib/server/agreements";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!(await isOwner())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

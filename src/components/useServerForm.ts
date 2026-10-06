@@ -10,12 +10,13 @@ import type { ActionState } from "@/app/actions/types";
 export function useServerForm(action: (prev: ActionState, form: FormData) => Promise<ActionState>) {
   const [state, setState] = useState<ActionState>({});
   const [pending, start] = useTransition();
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const data = new FormData(e.currentTarget);
+  const run = (data: FormData) =>
     start(async () => {
       setState(await action({}, data));
     });
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    run(new FormData(e.currentTarget));
   };
-  return { state, pending, onSubmit };
+  return { state, pending, onSubmit, run };
 }

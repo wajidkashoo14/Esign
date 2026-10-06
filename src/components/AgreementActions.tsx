@@ -1,34 +1,37 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { resendAction, sendAgreementAction, voidAction } from "@/app/actions/agreements";
+import { deleteDraftAction, resendAction, sendAgreementAction, voidAction } from "@/app/actions/agreements";
+import { ConfirmButton } from "./ConfirmButton";
+import { IconRefresh, IconSend } from "./Icons";
 import { LinkList } from "./LinkList";
 import { useServerForm } from "./useServerForm";
 
-export function SendButton({ id }: { id: string }) {
+export function SendButton({ id, signerCount }: { id: string; signerCount: number }) {
   const { state, pending, onSubmit } = useServerForm(sendAgreementAction);
   const router = useRouter();
+  if (state.ok && state.links) {
+    return (
+      <div>
+        <LinkList links={state.links} />
+        <button type="button" className="btn btn-primary mt-4" onClick={() => router.refresh()}>
+          Done
+        </button>
+      </div>
+    );
+  }
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="space-y-3">
       <input type="hidden" name="id" value={id} />
-      <button
-        className="btn btn-primary"
-        disabled={pending || state.ok}
-        onClick={(e) => {
-          if (!confirm("Send this agreement for signature? The text will be locked and cannot be changed afterwards.")) e.preventDefault();
-        }}
+      <ConfirmButton
+        confirmText={`Send to ${signerCount} signer${signerCount === 1 ? "" : "s"}? The text will be locked and can't be changed afterwards.`}
+        confirmLabel="Yes, send now"
+        pending={pending}
+        pendingLabel="Sending..."
       >
-        {pending ? "Sending..." : "Send for signature"}
-      </button>
-      {state.error && <p role="alert" className="mt-2 text-sm text-red-700">{state.error}</p>}
-      {state.ok && state.links && (
-        <>
-          <LinkList links={state.links} />
-          <button type="button" className="btn mt-3" onClick={() => router.refresh()}>
-            Done - show agreement
-          </button>
-        </>
-      )}
+        <IconSend /> Send for signature
+      </ConfirmButton>
+      {state.error && <p role="alert" className="alert-error">{state.error}</p>}
     </form>
   );
 }
@@ -36,13 +39,15 @@ export function SendButton({ id }: { id: string }) {
 export function ResendButton({ id, signerId, label }: { id: string; signerId: string; label: string }) {
   const { state, pending, onSubmit } = useServerForm(resendAction);
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="w-full">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="signerId" value={signerId} />
-      <button className="btn btn-sm" disabled={pending} title="Issues a new link; the previous link stops working">
-        {pending ? "..." : label}
-      </button>
-      {state.error && <p role="alert" className="mt-1 text-xs text-red-700">{state.error}</p>}
+      <div className="flex justify-end">
+        <button className="btn btn-sm" disabled={pending} title="Issues a new link; the previous link stops working">
+          <IconRefresh className="h-3.5 w-3.5" /> {pending ? "Sending..." : label}
+        </button>
+      </div>
+      {state.error && <p role="alert" className="mt-2 text-xs text-red-700">{state.error}</p>}
       {state.ok && state.links && <LinkList links={state.links} />}
     </form>
   );
@@ -51,20 +56,33 @@ export function ResendButton({ id, signerId, label }: { id: string; signerId: st
 export function VoidForm({ id }: { id: string }) {
   const { state, pending, onSubmit } = useServerForm(voidAction);
   return (
-    <form
-      onSubmit={(e) => {
-        if (!confirm("Void this agreement? Signing links stop working immediately. This cannot be undone.")) {
-          e.preventDefault();
-          return;
-        }
-        onSubmit(e);
-      }}
-      className="flex flex-wrap items-center gap-2"
-    >
+    <form onSubmit={onSubmit} className="space-y-3">
       <input type="hidden" name="id" value={id} />
-      <input name="reason" placeholder="Reason (optional)" maxLength={300} className="input max-w-xs" />
-      <button className="btn btn-danger" disabled={pending}>{pending ? "Voiding..." : "Void agreement"}</button>
-      {state.error && <p role="alert" className="w-full text-sm text-red-700">{state.error}</p>}
+      <div>
+        <label className="label" htmlFor="void-reason">Reason (optional, shared with signers)</label>
+        <input id="void-reason" name="reason" maxLength={300} className="input" placeholder="e.g. Terms changed, a new version will follow" />
+      </div>
+      <ConfirmButton
+        variant="danger"
+        confirmText="Void this agreement? All signing links stop working immediately and signers who haven't signed are told. This can't be undone."
+        confirmLabel="Yes, void it"
+        pending={pending}
+        pendingLabel="Voiding..."
+      >
+        Void agreement
+      </ConfirmButton>
+      {state.error && <p role="alert" className="alert-error">{state.error}</p>}
+    </form>
+  );
+}
+
+export function DeleteDraftForm({ id }: { id: string }) {
+  return (
+    <form action={deleteDraftAction}>
+      <input type="hidden" name="id" value={id} />
+      <ConfirmButton variant="danger" confirmText="Delete this draft permanently?" confirmLabel="Yes, delete">
+        Delete draft
+      </ConfirmButton>
     </form>
   );
 }
