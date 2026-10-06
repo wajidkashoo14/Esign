@@ -48,7 +48,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
           <p className="font-medium">You signed this on {fmtDateTime(view.signedAt)}.</p>
           <p className="mt-1 text-sm">
             {view.status === "completed"
-              ? "All parties have signed. The completed document has been emailed to everyone."
+              ? "All parties have signed. Completed copies are sent by email to every party."
               : "You will receive the completed document by email once everyone has signed."}
           </p>
         </div>

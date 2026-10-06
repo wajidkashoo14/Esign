@@ -68,8 +68,8 @@ export async function sendAgreementAction(_prev: ActionState, form: FormData): P
   const id = String(form.get("id"));
   try {
     const links = await sendAgreement(id, await clientInfo(), await baseUrl());
-    revalidatePath("/dashboard");
-    // The detail page is refreshed by the client after the owner has copied the one-time links.
+    // No revalidatePath here: it would re-render the page and unmount the one-time link list.
+    // The client calls router.refresh() once the owner has copied the links.
     return { ok: true, links };
   } catch (err) {
     return fail(err, "agreement.send_failed");

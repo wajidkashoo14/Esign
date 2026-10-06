@@ -398,7 +398,11 @@ export async function finalizeAgreement(agreementId: string): Promise<Uint8Array
     events: a.events.map((e) => ({
       at: e.createdAt,
       type: e.type,
-      actor: e.signer ? `${e.signer.name} <${e.signer.email}>` : "Owner / system",
+      actor: !e.signer
+        ? "Owner / system"
+        : e.type === "sent" || e.type === "resent"
+          ? `Owner (link for ${e.signer.name} <${e.signer.email}>)`
+          : `${e.signer.name} <${e.signer.email}>`,
       ip: e.ip,
       userAgent: e.userAgent,
     })),

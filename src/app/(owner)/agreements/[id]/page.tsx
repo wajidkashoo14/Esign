@@ -91,6 +91,8 @@ export default async function AgreementDetail({ params }: { params: Promise<{ id
                 <div className="text-right text-sm">
                   {s.signedAt ? (
                     <span className="text-green-700">Signed {fmtDateTime(s.signedAt)}</span>
+                  ) : status === "voided" || status === "expired" ? (
+                    <span className="text-gray-500">{status === "voided" ? "Cancelled" : "Expired"}</span>
                   ) : status === "draft" ? (
                     <span className="text-gray-500">Not sent</span>
                   ) : open && !myTurn ? (
